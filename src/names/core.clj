@@ -38,8 +38,16 @@
   (is (= (names ["ak" ["b" "z"] ["k" "r"]])
          '("akbk" "akbr" "akzk" "akzr"))))
 
+(defn format-name-list [values-per-line values]
+  (str (apply str (for [line-values (interpose "\n" (partition-all values-per-line values))]
+                       (apply str (interpose " " line-values)))) ))
+
+(deftest format-name-list-test
+  (is (= (format-name-list 2 [1 2 3 4 5 6 7])
+         "1 2\n3 4\n5 6\n7")))
+
 (defn spit-names [spec]
-  (spit "names.txt" (vec (names.core/names spec))))
+  (spit "names.txt" (format-name-list 20 (vec (names.core/names spec)))))
 
 (run-tests)
 
@@ -47,6 +55,6 @@
   (spit-names ["e" consonants vocals vocals consonants])
   (spit-names ["aa" consonants vocals])
 
-  (let [v (remove #{"ä" "ö"} vocals)
+(let [v (remove #{"ä" "ö"} vocals)
         c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)]
-    (spit-names ["ale" v])))
+    (spit-names [v v v v])))

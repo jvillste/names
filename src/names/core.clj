@@ -39,8 +39,8 @@
          '("akbk" "akbr" "akzk" "akzr"))))
 
 (defn format-name-list [values-per-line values]
-  (str (apply str (for [line-values (interpose "\n" (partition-all values-per-line values))]
-                       (apply str (interpose " " line-values)))) ))
+  (apply str (for [line-values (interpose "\n" (partition-all values-per-line values))]
+                       (apply str (interpose " " line-values)))))
 
 (deftest format-name-list-test
   (is (= (format-name-list 2 [1 2 3 4 5 6 7])

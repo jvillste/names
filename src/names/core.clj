@@ -47,7 +47,7 @@
          "1 2\n3 4\n5 6\n7")))
 
 (defn spit-names [spec]
-  (spit "names.txt" (format-name-list 20 (vec (names.core/names spec)))))
+  (spit "names.txt" (format-name-list 20 (names.core/names spec))))
 
 (run-tests)
 

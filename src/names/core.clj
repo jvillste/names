@@ -1,7 +1,7 @@
 (ns names.core
   (:use clojure.test))
 
-(def vocals ["a" "e" "i" "o" "u" "ä" "ö"])
+(def vocals ["a" "e" "i" "o" "u" "y" "ä" "ö"])
 (def consonants ["b" "c" "d" "f" "g" "h" "k" "l" "m" "n" "p" "q" "r" "s" "t" "v" "w" "x" "z"])
 
 (defn ensure-seq [value]
@@ -52,6 +52,6 @@
   (spit-names ["e" consonants vocals vocals consonants])
   (spit-names ["aa" consonants vocals])
 
-  (let [v (remove #{"ä" "ö"} vocals)
+(let [v (remove #{"ä" "ö"} vocals)
         c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)]
-    (spit-names ["ak" c v])))
+    (spit-names ["ale" v])))

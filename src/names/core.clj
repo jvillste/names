@@ -5,8 +5,9 @@
 (def consonants ["b" "c" "d" "f" "g" "h" "j" "k" "l" "m" "n" "p" "q" "r" "s" "t" "v" "w" "x" "z"])
 
 (defn ensure-seq [value]
-  (cond (sequential? value) value
-        :default [value]))
+  (if (sequential? value)
+    value
+    [value]))
 
 (deftest ensure-seq-test
   (is (= (ensure-seq "a")
@@ -46,6 +47,6 @@
   (spit-names ["e" consonants vocals vocals consonants])
   (spit-names ["aa" consonants vocals])
 
-(let [v (remove #{"ä" "ö"} vocals)
-      c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)]
+  (let [v (remove #{"ä" "ö"} vocals)
+        c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)]
     (spit-names ["ale" v])))

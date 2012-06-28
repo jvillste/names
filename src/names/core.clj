@@ -1,13 +1,11 @@
 (ns names.core
   (:use clojure.test))
 
-(def vocals ["a" "e" "i" "o" "u" "y" "ä" "ö"])
-(def consonants ["b" "c" "d" "f" "g" "h" "k" "l" "m" "n" "p" "q" "r" "s" "t" "v" "w" "x" "z"])
+(def vocals ["a" "e" "i" "o" "u" "y" "ä" "ö" "å"])
+(def consonants ["b" "c" "d" "f" "g" "h" "j" "k" "l" "m" "n" "p" "q" "r" "s" "t" "v" "w" "x" "z"])
 
 (defn ensure-seq [value]
-  (cond (vector? value) value
-        (seq? value) value
-        (list? value) value
+  (cond (sequential? value) value
         :default [value]))
 
 (deftest ensure-seq-test
@@ -36,12 +34,8 @@
   (is (= (names ["a"])
          ["a"] ))
 
-  (is (= (names [vocals vocals])
-         '("aa" "ae" "ai" "ao" "au" "aä" "aö" "ea" "ee" "ei"
-           "eo" "eu" "eä" "eö" "ia" "ie" "ii" "io" "iu" "iä"
-           "iö" "oa" "oe" "oi" "oo" "ou" "oä" "oö" "ua" "ue"
-           "ui" "uo" "uu" "uä" "uö" "äa" "äe" "äi" "äo" "äu"
-           "ää" "äö" "öa" "öe" "öi" "öo" "öu" "öä" "öö"))))
+  (is (= (names ["ak" ["b" "z"] ["k" "r"]])
+         '("akbk" "akbr" "akzk" "akzr"))))
 
 (defn spit-names [spec]
   (spit "names.txt" (vec (names.core/names spec))))
@@ -53,5 +47,5 @@
   (spit-names ["aa" consonants vocals])
 
 (let [v (remove #{"ä" "ö"} vocals)
-        c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)]
+      c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)]
     (spit-names ["ale" v])))

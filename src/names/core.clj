@@ -40,11 +40,24 @@
 
 (defn format-name-list [values-per-line values]
   (apply str (for [line-values (interpose "\n" (partition-all values-per-line values))]
-                       (apply str (interpose " " line-values)))))
+               (apply str (interpose " " line-values)))))
 
 (deftest format-name-list-test
   (is (= (format-name-list 2 [1 2 3 4 5 6 7])
          "1 2\n3 4\n5 6\n7")))
+
+(defn extract-pattern [name letter-groups]
+  (map (fn [letter]
+         (first (filter (fn [letter-group]
+                          (some (fn [group-letter]
+                                  (= (str letter) group-letter))
+                                letter-group))
+                        letter-groups)))
+       name))
+
+(deftest extract-pattern-test
+  (is (= (extract-pattern "abc" [["a" "b"] ["c" "d"]])
+         '(["a" "b"] ["a" "b"] ["c" "d"]))))
 
 (defn spit-names [spec]
   (spit "names.txt" (format-name-list 20 (names.core/names spec))))
@@ -55,6 +68,11 @@
   (spit-names ["e" consonants vocals vocals consonants])
   (spit-names ["aa" consonants vocals])
 
-(let [v (remove #{"ä" "ö"} vocals)
+  (let [v (remove #{"ä" "ö" "å"} vocals)
         c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)]
-    (spit-names [v v v v])))
+    (spit-names [v c c v]))
+
+  (let [front-vocals '("i" "o" "u" "y")
+        back-vocals '("a" "e")
+        consonants '("d" "g" "h" "j" "k" "l" "m" "n" "p" "r" "s" "t" "v")]
+    (spit-names (extract-pattern "lumia" [front-vocals back-vocals consonants]))))

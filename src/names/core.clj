@@ -60,7 +60,7 @@
          '(["a" "b"] ["a" "b"] ["c" "d"]))))
 
 (defn spit-names [spec]
-  (spit "names.txt" (format-name-list 20 (names.core/names spec))))
+  (spit "names.txt" (format-name-list 20 (names spec))))
 
 (run-tests)
 

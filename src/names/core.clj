@@ -25,7 +25,7 @@
      (flatten (names "" specification))))
 
 
-(deftest one-letter
+(deftest names-test
   (is (= (names [vocals])
          vocals))
 

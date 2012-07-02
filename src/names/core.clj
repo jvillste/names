@@ -27,6 +27,9 @@
              (rest dimension-sizes))
       digits)))
 
+
+
+
 (deftest coordinates-by-linear-ordering-test
   (is (= (coordinates-by-linear-ordering 0 [2 2])
          [0 0]))
@@ -48,6 +51,30 @@
 
   (is (= (coordinates-by-linear-ordering 6 [3 2])
          [0 0])))
+
+
+(defn index-by-linear-ordering [coordinates dimension-sizes]
+  (loop [result 0
+         multiplier 1
+         coordinates coordinates
+         dimension-sizes dimension-sizes]
+    (if (seq coordinates)
+      (recur (+ result
+                (* multiplier
+                   (first coordinates)))
+             (* multiplier
+                (first dimension-sizes))
+             (rest coordinates)
+             (rest dimension-sizes))
+      result)))
+
+(deftest index-by-linear-ordering-test
+  (is (= (index-by-linear-ordering [1 0] [2 2])
+         1))
+
+  (is (= (index-by-linear-ordering [1 1] [3 2])
+         4)))
+
 
 (defn symbols-to-names [spec]
   (map (fn [letter-specification]
@@ -74,8 +101,49 @@
          "ad"))
 
   (is (= (word [0 1] (symbols-to-names [['a "b"] ["c" "d"]]))
-         "ad"))
-  )
+         "ad")))
+
+(defn matching-word-part-index [word word-parts]
+  (loop [index 0
+         word-parts word-parts]
+    (if (.startsWith word (first word-parts))
+      index
+      (if (seq word-parts)
+        (recur (inc index)
+               (rest word-parts))
+        nil))))
+
+(deftest matching-word-part-index-test
+  (is (= (matching-word-part-index "word" ["o" "d" "w" "r"]))
+      2))
+
+(defn word-coordinates [word dimensions]
+  (loop [coordinates []
+         word word
+         dimensions dimensions]
+    (if (seq word)
+      (let [word-part-index (matching-word-part-index word
+                                                      (first dimensions))]
+        (recur (conj coordinates word-part-index)
+               (subs word (count (nth (first dimensions) word-part-index)))
+               (rest dimensions)))
+      coordinates)))
+
+(deftest word-coordinates-test
+  (is (= (word-coordinates "ab" [["a" "b"] ["a" "b"]])
+         [0 1]))
+  (is (= (word-coordinates "abcd" [["bc" "ab"] ["cd" "de"]])
+         [1 0])))
+
+(defn word-index [word dimensions]
+  (index-by-linear-ordering (word-coordinates word dimensions)
+                            (map count dimensions)))
+
+(deftest word-index-test
+  (is (= (word-index "ab" [["a" "b"] ["a" "b"]])
+         2))
+  (is (= (word-index "abcd" [["bc" "ab"] ["cd" "de"]])
+         1)))
 
 (defn maximum-index [dimensions]
   (reduce * (map count dimensions)))
@@ -89,24 +157,22 @@
      (names 0 dimensions ordering))
 
   ([index dimensions ordering]
-     (if (< index (maximum-index dimensions))
-       (lazy-seq (cons (word (ordering index (map count dimensions)) dimensions)
-                       (names (inc index)
-                              dimensions
-                              ordering)))
-       nil)))
+     (lazy-seq (cons (word (ordering index (map count dimensions)) dimensions)
+                     (names (inc index)
+                            dimensions
+                            ordering)))))
 
 (deftest names-test
-  (is (= (names [vocals] coordinates-by-linear-ordering)
+  (is (= (take (count vocals) (names [vocals] coordinates-by-linear-ordering))
          vocals))
 
-  (is (= (names [consonants] coordinates-by-linear-ordering)
+  (is (= (take (count consonants)(names [consonants] coordinates-by-linear-ordering))
          consonants))
 
-  (is (= (names [["a"]] coordinates-by-linear-ordering)
+  (is (= (take 1 (names [["a"]] coordinates-by-linear-ordering))
          ["a"] ))
 
-  (is (= (names [["ak"] ["b" "z"] ["k" "r"]] coordinates-by-linear-ordering)
+  (is (= (take 4 (names [["ak"] ["b" "z"] ["k" "r"]] coordinates-by-linear-ordering))
          '("akbk" "akzk" "akbr" "akzr"))))
 
 
@@ -191,11 +257,28 @@
   (is (= (symbols-to-names [["ak"] ["b" "z"] ["k" "r"]])
          '(("ak") ("b" "z") ("k" "r")))))
 
-(defn spit-names [spec ordering]
+(defn overflow [value maximum]
+  (if (< value 0)
+    (+ maximum (rem value maximum))
+    (rem value maximum)))
+
+(deftest overflow-test
+  (is (= (overflow 10 8)
+         2))
+
+  (is (= (overflow -2 8)
+         6)))
+
+(defn spit-names [spec ordering middle-index number-of-names]
   (let [spec (symbols-to-names spec)]
     (with-open [writer (io/writer "names.txt")]
       (doseq [line (format-name-list (int (/ 100 (name-specification-letter-count spec)))
-                                     (names spec ordering))]
+                                     (take number-of-names (names (overflow (- middle-index
+                                                                               (int (/ number-of-names
+                                                                                       2)))
+                                                                            (maximum-index spec))
+                                                                  spec
+                                                                  ordering)))]
         (.write writer (str line "\n"))))))
 
 (run-tests)
@@ -216,10 +299,10 @@
 
 
   (spit-names ["e" consonants vocals vocals consonants] coordinates-by-linear-ordering)
-  (spit-names [["ak"] ["b" "z"] ["k" "r"]] coordinates-by-linear-ordering)
-(println (names (symbols-to-names [["ak"] ["b" "z"] ["k" "r"]]) coordinates-by-linear-ordering))
+  (spit-names [["ak"] ["b" "z"] ["k" "r"]] coordinates-by-linear-ordering 0)
+  (println (names (symbols-to-names [["ak"] ["b" "z"] ["k" "r"]]) coordinates-by-linear-ordering))
 
-(let [v (remove #{"ä" "ö" "å"} vocals)
+  (let [v (remove #{"ä" "ö" "å"} vocals)
         c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)]
 
     (spit-names [c v c v c v] coordinates-by-linear-ordering)
@@ -233,19 +316,31 @@
 
   (let [v (remove #{"ä" "ö" "å"} vocals)
         c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)]
-    (spit-names ['(a e i u) ["m" "n" "l" "h" "v"] v ["on" "is" "os" "us"]]))
+    (spit-names ['(a e i u) ["m" "n" "l" "h" "v"] v ["on" "is" "os" "us"]]
+                coordinates-by-linear-ordering
+                0))
 
   (let [front-vocals '("i" "o" "u" "y")
         back-vocals '("a" "e")
         consonants '("d" "g" "h" "j" "k" "l" "m" "n" "p" "r" "s" "t" "v")]
     (spit-names (extract-pattern "eliel" [front-vocals back-vocals consonants])))
+
   (spit-names (extract-pattern "esa" ['("i" "o" "u" "y")
                                       '("a" "e")
                                       '("h" "j" "s" "v")
-                                      '("d" "g" "k" "l" "m" "n" "p" "r" "t")]))
+                                      '("d" "g" "k" "l" "m" "n" "p" "r" "t")])
+              coordinates-by-linear-ordering
+              0)
 
-  (spit-names (extract-pattern "hiljaa" ['("i" "o" "u" "y" "a" "e")
-                                         '("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")]))
+(let [dimensions ['("i" "o" "u" "y" "a" "e")
+                  '("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")]
+        name "elia"
+        pattern (extract-pattern name dimensions)]
+    (spit-names pattern
+                coordinates-by-linear-ordering
+                (word-index name pattern)
+                1000))
+
 
   (println (extract-pattern-signature "klojure" ['("i" "o" "u" "y" "a" "e")
                                                  '("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")]))

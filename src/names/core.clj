@@ -1,6 +1,7 @@
 (ns names.core
   (:require [clojure.java.io :as io]
             [names.linear-space :as linear-space]
+            [names.dimensional-space :as dimensional-space]
             [names.space :as space])
   (:use clojure.test))
 
@@ -190,7 +191,6 @@
 
 
 (defn spit-similar-names [name dimensions number-of-names]
-  (println (map count (extract-pattern name dimensions)))
   (let [pattern (extract-pattern name dimensions)
         dimension-sizes (map count pattern)
         space (linear-space/->LinearSpace dimension-sizes)
@@ -203,6 +203,33 @@
 
     (spit-names pattern
                 coordinates)))
+
+(defn set-origo [word dimensions]
+  (loop [new-dimensions []
+         word (map str word)
+         dimensions dimensions]
+    (if (seq dimensions)
+      (recur (conj new-dimensions (concat [(first word)] (filter #(not (= (first word) %))
+                                                                 (first dimensions))))
+             (rest word)
+             (rest dimensions))
+      new-dimensions)))
+
+(deftest set-origo-test
+  (is (= (set-origo "bc" [["a" "b" "c"] ["a" "b" "c"]])
+         [["b" "a" "c"] ["c" "a" "b"]])))
+
+
+(defn spit-similar-names-dimensionally [name dimensions]
+  (let [pattern (set-origo name (extract-pattern name dimensions))
+        dimension-sizes (map count pattern)
+        coordinates (->> (range (dimensional-space/size dimension-sizes))
+                         (map #(dimensional-space/coordinates % dimension-sizes)))]
+
+    (spit-names pattern
+                coordinates)))
+
+
 
 
 (run-tests)
@@ -256,10 +283,14 @@
               linear-space-coordinates
               0)
 
-(spit-similar-names "jukka"
+  (spit-similar-names "jukka"
                       ['("i" "o" "u" "y" "a" "e")
                        '("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")]
                       100)
+
+(spit-similar-names-dimensionally "elias"
+                                    ['("i" "o" "u" "y" "a" "e")
+                                     '("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")])
 
 
 

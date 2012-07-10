@@ -2,7 +2,8 @@
   (:require [clojure.java.io :as io]
             [names.linear-space :as linear-space]
             [names.dimensional-space :as dimensional-space]
-            [names.space :as space])
+            [names.space :as space]
+            [names.gui :as gui])
   (:use clojure.test))
 
 
@@ -182,6 +183,8 @@
   (is (= (overflow -2 8)
          6)))
 
+
+
 (defn spit-names [dimensions coordinates]
   (with-open [writer (io/writer "names.txt")]
     (doseq [line (->> coordinates
@@ -190,10 +193,11 @@
       (.write writer (str line "\n")))))
 
 
-(defn spit-similar-names [name dimensions number-of-names]
+(defn spit-similar-names [name dimensions]
   (let [pattern (extract-pattern name dimensions)
         dimension-sizes (map count pattern)
         space (linear-space/->LinearSpace dimension-sizes)
+        number-of-names (linear-space/size dimension-sizes)
         start-index (overflow (- (space/index space (word-coordinates name pattern))
                                  (int (/ number-of-names
                                          2)))
@@ -276,21 +280,28 @@
         consonants '("d" "g" "h" "j" "k" "l" "m" "n" "p" "r" "s" "t" "v")]
     (spit-names (extract-pattern "eliel" [front-vocals back-vocals consonants])))
 
-  (spit-names (extract-pattern "esa" ['("i" "o" "u" "y")
-                                      '("a" "e")
-                                      '("h" "j" "s" "v")
-                                      '("d" "g" "k" "l" "m" "n" "p" "r" "t")])
-              linear-space-coordinates
-              0)
+  (def dimensions1 ['("i" "o" "u" "y")
+                    '("a" "e")
+                    '("h" "j" "s" "v")
+                    '("d" "g" "k" "l" "m" "n" "p" "r" "t")])
 
-  (spit-similar-names "jukka"
-                      ['("i" "o" "u" "y" "a" "e")
-                       '("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")]
-                      100)
+  (def dimensions2 ['("i" "o" "u" "y" "a" "e")
+                    '("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")])
 
-(spit-similar-names-dimensionally "elias"
-                                    ['("i" "o" "u" "y" "a" "e")
-                                     '("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")])
+  (spit-similar-names "elia"
+                      dimensions2)
+
+  (spit-similar-names-dimensionally "savu"
+                                    dimensions2)
+
+(gui/start (fn [index] (let [name "jukka"
+                               pattern (set-origo name (extract-pattern name dimensions2))
+                               dimension-sizes (map count pattern)]
+                           (if (< index
+                                  (dimensional-space/size dimension-sizes))
+                             (word  (dimensional-space/coordinates index dimension-sizes)
+                                    pattern)
+                             nil))))
 
 
 

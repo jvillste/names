@@ -85,6 +85,8 @@
                         letter-groups)))
        name))
 
+
+
 (deftest extract-pattern-test
   (is (= (extract-pattern "abc" [["a" "b"] ["c" "d"]])
          '(["a" "b"] ["a" "b"] ["c" "d"]))))
@@ -219,10 +221,15 @@
              (rest dimensions))
       new-dimensions)))
 
+
+
 (deftest set-origo-test
   (is (= (set-origo "bc" [["a" "b" "c"] ["a" "b" "c"]])
          [["b" "a" "c"] ["c" "a" "b"]])))
 
+
+(defn extract-pattern-and-set-origo [name letter-groups]
+  (set-origo name (extract-pattern name letter-groups)))
 
 (defn spit-similar-names-dimensionally [name dimensions]
   (let [pattern (set-origo name (extract-pattern name dimensions))
@@ -233,7 +240,19 @@
     (spit-names pattern
                 coordinates)))
 
+(defn generator [size-function coordinates-function pattern index]
+  (let [dimension-sizes (map count pattern)]
+    (if (< index
+           (size-function dimension-sizes))
+      (word  (coordinates-function index dimension-sizes)
+             pattern)
+      nil)))
 
+(defn dimensional-generator [pattern index]
+  (generator dimensional-space/size  dimensional-space/coordinates pattern index))
+
+(defn linear-generator [pattern index]
+  (generator linear-space/size  linear-space/coordinates pattern index))
 
 
 (run-tests)
@@ -294,14 +313,17 @@
   (spit-similar-names-dimensionally "savu"
                                     dimensions2)
 
-(gui/start (fn [index] (let [name "jukka"
-                               pattern (set-origo name (extract-pattern name dimensions2))
-                               dimension-sizes (map count pattern)]
-                           (if (< index
-                                  (dimensional-space/size dimension-sizes))
-                             (word  (dimensional-space/coordinates index dimension-sizes)
-                                    pattern)
-                             nil))))
+  (gui/start (partial linear-generator
+                      (extract-pattern-and-set-origo "alpo"
+                                                     ['("i" "o" "u" "y" "a" "e")
+                                                      '("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")])))
+
+
+(gui/start (partial linear-generator
+                      ['("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")
+                       '( "aa") ;; '("ii" "oo" "uu" "yy" "aa" "ee")
+                       '("h" "j" "s" "v" "d" "g" "k" "l" "m" "n" "p" "r" "t")
+                       '("i" "o" "u" "y" "a" "e")]))
 
 
 

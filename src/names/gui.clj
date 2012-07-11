@@ -35,19 +35,29 @@
       nil)
     (name-generator index)))
 
-(defn name-x [index name-width names-per-line]
+(defn name-x [index name-width lines-per-page]
   (* name-width
-     (mod index names-per-line)))
+     (quot index lines-per-page)))
 
-(defn name-y [index name-height names-per-line]
+(defn name-y [index name-height lines-per-page]
   (* name-height
-     (+ 1 (quot index names-per-line))))
+     (+ 1 (mod index lines-per-page))))
 
-(defn name-text-for-index [index start-index font names-per-line name-width name-height ratings show-only-rated-names name-generator]
-  {:x (name-x (- index start-index) name-width names-per-line)
-   :y (name-y (- index start-index) name-height names-per-line)
-   :text (str (name-for-index index ratings show-only-rated-names name-generator) " " (get ratings (name-for-index index ratings show-only-rated-names name-generator)))
-   :font font})
+(defn name-text-for-index [index start-index font lines-per-page name-width name-height ratings show-only-rated-names name-generator]
+  (let [name (name-for-index index ratings show-only-rated-names name-generator)
+        rating (get ratings name)
+        index-in-page (- index start-index)]
+    {:x (name-x index-in-page name-width lines-per-page)
+     :y (name-y index-in-page name-height lines-per-page)
+     :text (str name " " rating )
+     :font font
+     :color (case rating
+              1 [0.0 0.7 0.7 1.0]
+              2 [0.0 0.8 0.0 1.0]
+              3 [0.0 0.7 0.7 1.0]
+              4 [0.0 0.8 0.0 1.0]
+              5 [0.0 0.7 0.7 1.0]
+              [0.0 0.0 0.0 1.0])}))
 
 (defn name-width [font letters-in-name]
   (font/width font (apply str (repeat letters-in-name "W"))))
@@ -60,25 +70,26 @@
         (name-width font letters-in-name)))
 
 (defn lines-per-page [page-height font]
-  (- (quot page-height
-           (name-height font))
-     2))
+  (quot page-height
+        (name-height font)))
 
 (defn names-per-page [font page-width page-height letters-in-name]
   (* (names-per-line font letters-in-name page-width)
      (lines-per-page page-height font)))
 
 (defn names [start-index font letters-in-name width height ratings show-only-rated-names name-generator]
-  (let [name-width (name-width font letters-in-name)]
+  (let [name-width (name-width font letters-in-name)
+        start-index (if show-only-rated-names 0 start-index)]
     (->> (range start-index (+ start-index (names-per-page font width height letters-in-name)))
-         (map #(name-text-for-index % start-index font (quot width name-width) name-width (name-height font) ratings show-only-rated-names name-generator)))))
+         (map #(name-text-for-index % start-index font (lines-per-page height font) name-width (name-height font) ratings show-only-rated-names name-generator)))))
 
 (defn draw-text [graphics text]
-  (doto graphics
-    (.setColor Color/BLACK)
-    (.setFont (font/graphics-font (:font text)))
-    (.setRenderingHint RenderingHints/KEY_TEXT_ANTIALIASING RenderingHints/VALUE_TEXT_ANTIALIAS_LCD_HBGR )
-    (.drawString (:text text) (:x text) (:y text))))
+  (let [[r g b a] (map float (:color text))]
+    (doto graphics
+      (.setColor (Color. r g b a))
+      (.setFont (font/graphics-font (:font text)))
+      (.setRenderingHint RenderingHints/KEY_TEXT_ANTIALIASING RenderingHints/VALUE_TEXT_ANTIALIAS_LCD_HBGR )
+      (.drawString (:text text) (:x text) (:y text)))))
 
 
 (defn draw-names [application]
@@ -105,10 +116,10 @@
        (= (:type keyboard-event)
           :key-pressed)))
 
-(defn name-index-in-coordinates [x y page-width font letters-in-name]
-  (+ (* (names-per-line font letters-in-name page-width)
-        (quot y (name-height font)))
-     (quot x (name-width font letters-in-name))))
+(defn name-index-in-coordinates [x y page-height font letters-in-name]
+  (+ (* (lines-per-page page-height font)
+        (quot x (name-width font letters-in-name)))
+     (quot y (name-height font))))
 
 (defn save-ratings [application]
   (spit "ratings.txt" (:name-ratings application))
@@ -141,19 +152,18 @@
                                      (let [width (name-width (:font application)
                                                              (:letters-in-name application))
                                            height (name-height (:font application))
-                                           names-per-line (names-per-line (:font application)
-                                                                          (:letters-in-name application)
-                                                                          @(:width (:window application)))]
+                                           lines-per-page (lines-per-page (:page-height application)
+                                                                          (:font application))]
                                        (vector-rectangle/rectangle  (name-x index
                                                                             width
-                                                                            names-per-line)
+                                                                            lines-per-page)
                                                                     (- (name-y  index
                                                                                 height
-                                                                                names-per-line)
+                                                                                lines-per-page)
                                                                        height)
                                                                     width
                                                                     height
-                                                                    (map float [0.0 0.0 1.0]))))))
+                                                                    (map float [0.8 0.8 0.8]))))))
 
 (defn handle-event [application event]
   (cond
@@ -168,7 +178,7 @@
                 :mouse-y y)
          (highlight-name (name-index-in-coordinates x
                                                     y
-                                                    (:page-width application)
+                                                    (:page-height application)
                                                     (:font application)
                                                     (:letters-in-name application)))))
 
@@ -178,11 +188,12 @@
    (= (:type event)
       :left-mouse-button-up)
    (change-name-rating application
-                       (name-for-index (name-index-in-coordinates (:mouse-x application)
-                                                                  (:mouse-y application)
-                                                                  (:page-width application)
-                                                                  (:font application)
-                                                                  (:letters-in-name application))
+                       (name-for-index (+ (name-index-in-coordinates (:mouse-x application)
+                                                                     (:mouse-y application)
+                                                                     (:page-height application)
+                                                                     (:font application)
+                                                                     (:letters-in-name application))
+                                          (:index application))
                                        (:name-ratings application)
                                        (:show-only-rated-names application)
                                        (:name-generator application))
@@ -192,11 +203,12 @@
    (= (:type event)
       :right-mouse-button-up)
    (change-name-rating application
-                       (name-for-index (name-index-in-coordinates (:mouse-x application)
-                                                                  (:mouse-y application)
-                                                                  (:page-width application)
-                                                                  (:font application)
-                                                                  (:letters-in-name application))
+                       (name-for-index (+ (name-index-in-coordinates (:mouse-x application)
+                                                                     (:mouse-y application)
+                                                                     (:page-height application)
+                                                                     (:font application)
+                                                                     (:letters-in-name application))
+                                          (:index application))
                                        (:name-ratings application)
                                        (:show-only-rated-names application)
                                        (:name-generator application)
@@ -266,7 +278,7 @@
       (render)))
 
 (defn start [name-generator]
-  (window/start 700 500
+  (window/start 1000 500
                 20
                 (fn [window] (create-application window name-generator))
                 update

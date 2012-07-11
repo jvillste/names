@@ -30,7 +30,7 @@
 (defn name-for-index [index ratings show-only-rated-names name-generator]
   (if show-only-rated-names
     (if (< index (count (seq ratings)))
-      (str (first (nth (sort-by second (seq ratings))
+      (str (first (nth (sort-by #(str (second %) (first %)) (seq ratings))
                        index)))
       nil)
     (name-generator index)))
@@ -52,9 +52,9 @@
      :text (str name " " rating )
      :font font
      :color (case rating
-              1 [0.0 0.7 0.7 1.0]
-              2 [0.0 0.8 0.0 1.0]
-              3 [0.0 0.7 0.7 1.0]
+              1 [0.0 0.5 0.0 1.0]
+              2 [0.5 0.0 0.0 1.0]
+              3 [0.0 0.5 0.0 1.0]
               4 [0.0 0.8 0.0 1.0]
               5 [0.0 0.7 0.7 1.0]
               [0.0 0.0 0.0 1.0])}))
@@ -197,7 +197,6 @@
       (draw-names)))
 
 (defn handle-event [application event]
-  (println event)
   (cond
 
    (= (:type event)
@@ -283,7 +282,7 @@
   (-> {:maximum-index maximum-index
        :name-generator name-generator
        :name-ratings {}
-       :font (font/create "LiberationMono-Regular.ttf" 11)
+       :font (font/create "LiberationMono-Regular.ttf" 14)
        :letters-in-name (+ 3 (count (name-generator 0)))
        :index 0
        :page-width (int @(:width window))

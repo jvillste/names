@@ -278,7 +278,8 @@
 
 (let [v (remove #{"ä" "ö" "å"} vocals)
       c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)
-      pattern [c v c v c v]]
+      pattern [c v c v c v]
+      pattern (extract-pattern-and-set-origo "untojoutsi" [c v])]
 
     (gui/start (partial linear-generator
                         pattern)

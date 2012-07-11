@@ -92,6 +92,27 @@
       (.drawString (:text text) (:x text) (:y text)))))
 
 
+(defn draw-page-number [application]
+  (let [{:keys [index font page-width page-height letters-in-name maximum-index]} application
+        names-per-page (names-per-page font
+                                       page-width
+                                       page-height
+                                       letters-in-name)]
+    (image-list/draw-on-image (:image-list application)
+                              :names
+                              (fn [graphics]
+                                (draw-text graphics {:color (map float [0.0 0.0 0.0 1.0])
+                                                     :font font
+                                                     :x (int 5)
+                                                     :y (int (- @(:height (:window application))
+                                                                5))
+                                                     :text (str (+ 1 (quot index names-per-page))
+                                                                "/"
+                                                                (+ 1 (quot maximum-index names-per-page))
+                                                                )}))))
+
+  application)
+
 (defn draw-names [application]
   (image-list/clear-image (:image-list application) :names)
   (image-list/draw-on-image (:image-list application)
@@ -100,15 +121,14 @@
                               (doseq [text (names (:index application)
                                                   (:font application)
                                                   (:letters-in-name application)
-                                                  (int @(:width (:window application)))
-                                                  (int @(:height (:window application)))
+                                                  (:page-width application)
+                                                  (:page-height application)
                                                   (:name-ratings application)
                                                   (:show-only-rated-names application)
                                                   (:name-generator application))]
                                 (draw-text graphics text))))
+  (draw-page-number application)
   application)
-
-
 
 (defn key-pressed [keyboard-event key]
   (and (= (:key-code keyboard-event)
@@ -165,7 +185,19 @@
                                                                     height
                                                                     (map float [0.8 0.8 0.8]))))))
 
+(defn change-page [application delta]
+  (-> application
+      (assoc :index (max 0
+                         (+ (* delta
+                               (names-per-page  (:font application)
+                                                (:page-width application)
+                                                (:page-height application)
+                                                (:letters-in-name application)))
+                            (:index application))))
+      (draw-names)))
+
 (defn handle-event [application event]
+  (println event)
   (cond
 
    (= (:type event)
@@ -181,9 +213,6 @@
                                                     (:page-height application)
                                                     (:font application)
                                                     (:letters-in-name application)))))
-
-
-
 
    (= (:type event)
       :left-mouse-button-up)
@@ -211,8 +240,7 @@
                                           (:index application))
                                        (:name-ratings application)
                                        (:show-only-rated-names application)
-                                       (:name-generator application)
-                                       )
+                                       (:name-generator application))
                        -1)
 
    (key-pressed event input/escape)
@@ -224,26 +252,17 @@
        (assoc :show-only-rated-names (not (:show-only-rated-names application)))
        (draw-names))
 
-   (key-pressed event input/down)
-   (-> application
-       (assoc :index (+ (names-per-page  (:font application)
-                                         (:page-width application)
-                                         (:page-height application)
-                                         (:letters-in-name application))
-                        (:index application)))
-       (draw-names))
+   (key-pressed event input/page-down)
+   (change-page application 10)
 
+   (key-pressed event input/page-up)
+   (change-page application -10)
+
+   (key-pressed event input/down)
+   (change-page application 1)
 
    (key-pressed event input/up)
-   (-> application
-       (assoc :index (max (- (:index application)
-                             (names-per-page  (:font application)
-                                              (:page-width application)
-                                              (:page-height application)
-                                              (:letters-in-name application)))
-                          0))
-       (draw-names))
-
+   (change-page application -1)
 
    :default application))
 
@@ -260,14 +279,15 @@
       (handle-events)))
 
 
-(defn create-application [window name-generator]
-  (-> {:name-generator name-generator
+(defn create-application [window name-generator maximum-index]
+  (-> {:maximum-index maximum-index
+       :name-generator name-generator
        :name-ratings {}
        :font (font/create "LiberationMono-Regular.ttf" 11)
        :letters-in-name (+ 3 (count (name-generator 0)))
        :index 0
        :page-width (int @(:width window))
-       :page-height (int @(:height window))
+       :page-height (- (int @(:height window)) 20)
        :image-list (-> (image-list/create)
                        (image-list/add-image :names 0 0 (int @(:width window)) (int @(:height window))))
        :triangle-list (triangle-list/create 10)
@@ -277,10 +297,10 @@
       (draw-names)
       (render)))
 
-(defn start [name-generator]
+(defn start [name-generator maximum-index]
   (window/start 1000 500
                 20
-                (fn [window] (create-application window name-generator))
+                (fn [window] (create-application window name-generator maximum-index))
                 update
                 (fn [_])))
 

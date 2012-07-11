@@ -276,10 +276,14 @@
   (spit-names [["ak"] ["b" "z"] ["k" "r"]] linear-space-coordinates 0)
   (println (names (symbols-to-names [["ak"] ["b" "z"] ["k" "r"]]) linear-space-coordinates))
 
-  (let [v (remove #{"ä" "ö" "å"} vocals)
-        c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)]
+(let [v (remove #{"ä" "ö" "å"} vocals)
+      c (remove #{"b" "c" "f" "q" "w" "x" "z"} consonants)
+      pattern [c v c v c v]]
 
-    (spit-names [c v c v c v] linear-space-coordinates)
+    (gui/start (partial linear-generator
+                        pattern)
+               (linear-space/size (map count pattern)))
+    ;;(spit-names [c v c v c v] linear-space-coordinates)
     ;;[c v c c v] : 1595
     ;;[c v c v c v] : 901
     ;;[c v v c v] : 857
